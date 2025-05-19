@@ -10,8 +10,8 @@ from torch.utils.data import Dataset, DataLoader
 from torchaudio.transforms import MelSpectrogram, AmplitudeToDB, FrequencyMasking, TimeMasking
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LogisticRegression
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.naive_bayes import MultinomialNB
 from tqdm import tqdm
 from torchaudio.functional import edit_distance
 from pyctcdecode import build_ctcdecoder
@@ -57,21 +57,24 @@ val_texts = val_df["text"].tolist()
 val_actions = ["off" if a == 0 else "on" for a in val_df["action"]]
 val_objects = val_df["object"].tolist()
 
+# Enrich training and validation texts
 train_texts_enriched = [enrich_text(t) for t in train_texts]
 val_texts_enriched = [enrich_text(t) for t in val_texts]
 
-# Train Naive Bayes classifiers for action and object detection
+# Action classifier: predicts On or Off
 action_classifier = Pipeline([
-    ("tfidf", TfidfVectorizer(ngram_range=(1, 2))),
-    ("clf", MultinomialNB())
+    ("tfidf", TfidfVectorizer(analyzer='char_wb', ngram_range=(3, 5))),
+    ("clf", LogisticRegression(max_iter=1000))
 ])
 action_classifier.fit(train_texts, train_actions)
 
+# Object classifier: predicts Lights or Music
 object_classifier = Pipeline([
-    ("tfidf", TfidfVectorizer(ngram_range=(1, 2))),
-    ("clf", MultinomialNB())
+    ("tfidf", TfidfVectorizer(analyzer='char_wb', ngram_range=(3, 5))),
+    ("clf", LogisticRegression(max_iter=1000))
 ])
 object_classifier.fit(train_texts_enriched, train_objects)
+
 
 # Save classifiers to disk
 joblib.dump(action_classifier, "action_classifier.pkl")

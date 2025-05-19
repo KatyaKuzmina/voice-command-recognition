@@ -6,9 +6,6 @@ import torchaudio
 import pandas as pd
 import joblib
 from tqdm import tqdm
-from sklearn.pipeline import Pipeline
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import accuracy_score, classification_report
 from torchaudio.transforms import MelSpectrogram, AmplitudeToDB
 from torchaudio.functional import edit_distance
@@ -28,7 +25,7 @@ vocab_list = VOCAB.copy()
 vocab_list[0] = ""
 beam_decoder = build_ctcdecoder(vocab_list)
 
-device = torch.device("cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 total_infer_time = 0.0
 num_infer_samples = 0
 
@@ -135,23 +132,10 @@ train_objects = train_df["object"].tolist()
 
 train_texts_enriched = [enrich_text(t) for t in train_texts]
 
-# Train simple text-based classifiers
-action_classifier = Pipeline([
-    ("tfidf", TfidfVectorizer(ngram_range=(1, 2))),
-    ("clf", MultinomialNB())
-])
-action_classifier.fit(train_texts, train_actions)
-
-object_classifier = Pipeline([
-    ("tfidf", TfidfVectorizer(ngram_range=(1, 2))),
-    ("clf", MultinomialNB())
-])
-object_classifier.fit(train_texts_enriched, train_objects)
-
 # === Load Model & Test Set ===
 
 model = ASRModel(n_mels=N_MELS, hidden_dim=512, vocab_size=len(VOCAB)).to(device)
-model.load_state_dict(torch.load("best_asr_model_last_best.pth", map_location=device))
+model.load_state_dict(torch.load("best_asr_model.pth", map_location=device))
 model.eval()
 
 test_ds = SpeechDataset("test_dataset", "test.csv", mel_transform)
@@ -221,6 +205,12 @@ print(f"Average inference time per sample: {total_infer_time / num_infer_samples
 test_df = pd.read_csv("test_labels.csv", header=None, names=["text", "action", "object"])
 test_actions = test_df["action"].map({0: "off", 1: "on"}).tolist()
 test_objects = test_df["object"].tolist()
+
+action_acc = accuracy_score(test_actions[:len(pred_actions)], pred_actions)
+object_acc = accuracy_score(test_objects[:len(pred_objects)], pred_objects)
+
+print(f"\nAction classification accuracy: {action_acc:.3f}")
+print(f"Object classification accuracy: {object_acc:.3f}")
 
 action_acc = accuracy_score(test_actions[:len(pred_actions)], pred_actions)
 object_acc = accuracy_score(test_objects[:len(pred_objects)], pred_objects)

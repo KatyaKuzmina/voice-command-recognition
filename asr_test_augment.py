@@ -7,9 +7,6 @@ import pandas as pd
 import random
 import joblib
 from tqdm import tqdm
-from sklearn.pipeline import Pipeline
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import accuracy_score, classification_report
 from torchaudio.transforms import MelSpectrogram, AmplitudeToDB
 from torchaudio.functional import edit_distance
@@ -136,20 +133,6 @@ train_objects = train_df["object"].tolist()
 
 train_texts_enriched = [enrich_text(t) for t in train_texts]
 
-# Train simple text-based classifiers
-action_classifier = Pipeline([
-    ("tfidf", TfidfVectorizer(ngram_range=(1, 2))),
-    ("clf", MultinomialNB())
-])
-action_classifier.fit(train_texts, train_actions)
-
-object_classifier = Pipeline([
-    ("tfidf", TfidfVectorizer(ngram_range=(1, 2))),
-    ("clf", MultinomialNB())
-])
-object_classifier.fit(train_texts_enriched, train_objects)
-
-
 # === Audio Augmentation for Testing ===
 
 def augment_audio(waveform, sample_rate):
@@ -170,7 +153,7 @@ def augment_audio(waveform, sample_rate):
 
 
 model = ASRModel(n_mels=N_MELS, hidden_dim=512, vocab_size=len(VOCAB)).to(device)
-model.load_state_dict(torch.load("best_asr_model_last_best.pth", map_location=device))
+model.load_state_dict(torch.load("best_asr_model.pth", map_location=device))
 model.eval()
 
 test_ds = SpeechDataset("test_dataset", "test.csv", mel_transform)
@@ -245,8 +228,6 @@ with torch.no_grad():
 # === Metric Computation ===
 
 def wer(r, h): return edit_distance(r.split(), h.split()) / max(1, len(r.split()))
-
-
 def cer(r, h): return edit_distance(list(r), list(h)) / max(1, len(r))
 
 

@@ -14,6 +14,7 @@ Darba mērķis bija izveidot vienkāršu runas atpazīšanas sistēmu, kas spēj
 - Vienkāršots **lietotāja saskarnes prototips**
 
 Maģistra darba ietvaros labāko pietrenēto modeli var lejupielādēt caur saiti best_asr_model.txt failā
+
 ---
 
 Plašāka informācija pieejama maģistra darba dokumentā.

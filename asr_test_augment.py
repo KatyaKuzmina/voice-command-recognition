@@ -26,7 +26,7 @@ vocab_list = VOCAB.copy()
 vocab_list[0] = ""
 beam_decoder = build_ctcdecoder(vocab_list)
 
-device = torch.device("cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 total_infer_time = 0.0
 num_infer_samples = 0
 
